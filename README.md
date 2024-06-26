@@ -1,1 +1,1 @@
-# SecureChat
+SecureChat is a backend application designed to provide a secure communication platform. This project sets up an HTTP server, defines basic routes for operation, and includes a simple GET route to verify server status. Built using Go's standard net/http package and custom handler packages, it aims to offer a secure and efficient chat service. The server listens on port 8080, ready to handle requests.
