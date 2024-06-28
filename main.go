@@ -1,29 +1,30 @@
 package main
 
 import (
-	"log"
-	"net/http"
-	"os"
+    "log"
+    "net/http"
+    "os"
 
-	"github.com/joho/godotenv"
-	"yourproject/handler"
+    "github.com/joho/godotenv"
+    "yourproject/handler"
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+    // Loading .env file with more detailed error logging.
+    if err := godotenv.Load(); err != nil {
+        log.Fatalf("Error loading .env file: %v", err)
+    }
 
-	httpPort := os.Getenv("PORT")
-	if httpPort == "" {
-		log.Fatal("$PORT must be set")
-	}
+    httpPort := os.Getenv("PORT")
+    if httpPort == "" {
+        log.Fatal("Environment variable $PORT must be set")
+    }
 
-	http.HandleFunc("/status", handler.StatusHandler)
+    // Setting up HTTP handler.
+    http.HandleFunc("/status", handler.StatusItHandler)
 
-	log.Println("Starting server on port " + httpPort)
-	if err := http.ListenAndServe(":"+httpPort, nil); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
-	}
+    log.Printf("Starting server on port %s", httpPort)
+    if err := http.ListenAndServe(":"+httpPort, nil); err != nil {
+        log.Fatalf("Failed to start server on port %s: %v", httpPort, err)
+    }
 }
