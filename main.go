@@ -4,10 +4,22 @@ import (
     "log"
     "net/http"
     "os"
+    "sync"
 
     "github.com/joho/godotenv"
     "yourproject/handler"
 )
+
+// A global instance to share across requests to avoid recreating.
+// Be careful with state management in handler functions.
+var once sync.Once
+
+func setupHandlers() {
+    // Setup that needs to be done only once
+    once.Do(func() {
+        http.HandleFunc("/status", handler.StatusItHandler)
+    })
+}
 
 func main() {
     // Loading .env file with more detailed error logging.
@@ -21,8 +33,8 @@ func main() {
     }
 
     // Setting up HTTP handler.
-    http.HandleFunc("/status", handler.StatusItHandler)
-
+    setupHandlers()
+    
     log.Printf("Starting server on port %s", httpPort)
     if err := http.ListenAndServe(":"+httpPort, nil); err != nil {
         log.Fatalf("Failed to start server on port %s: %v", httpPort, err)
