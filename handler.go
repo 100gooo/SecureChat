@@ -22,7 +22,7 @@ var aesKey []byte
 func init() {
     key := os.Getenv("AES_KEY")
     if len(key) != 32 {
-        log.Fatalf("AES_KEY must be 32 bytes long, got %d bytes", len(key))
+        log.Panicf("AES_KEY must be 32 bytes long, got %d bytes", len(key))
     }
     aesKey = []byte(key)
 }
@@ -30,14 +30,14 @@ func init() {
 func encrypt(text string) (string, error) {
     block, err := aes.NewCipher(aesKey)
     if err != nil {
-        return "", fmt.Errorf("error creating AES cipher: %w", err)
+        return "", fmt.Errorf("error creating AES cipher: %v", err)
     }
 
     b := base64.StdEncoding.EncodeToString([]byte(text))
     ciphertext := make([]byte, aes.BlockSize+len(b))
     iv := ciphertext[:aes.BlockSize]
     if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-        return "", fmt.Errorf("error generating IV: %w", err)
+        return "", fmt.Errorf("error generating IV: %v", err)
     }
 
     stream := cipher.NewCFBEncrypter(block, iv)
@@ -49,12 +49,12 @@ func encrypt(text string) (string, error) {
 func decrypt(encodedText string) (string, error) {
     block, err := aes.NewCipher(aesKey)
     if err != nil {
-        return "", fmt.Errorf("error creating AES cipher: %w", err)
+        return "", fmt.Errorf("error creating AES cipher: %v", err)
     }
 
     decodedMsg, err := base64.URLEncoding.DecodeString(encodedText)
     if err != nil {
-        return "", fmt.Errorf("error decoding message: %w", err)
+        return "", fmt.Errorf("error decoding message: %v", err)
     }
 
     if len(decodedMsg) < aes.BlockSize {
@@ -68,7 +68,7 @@ func decrypt(encodedText string) (string, error) {
 
     decodedText, err := base64.StdEncoding.DecodeString(string(decodedMsg))
     if err != nil {
-        return "", fmt.Errorf("error decoding base64 text: %w", err)
+        return "", fmt.Errorf("error decoding base64 text: %v", err)
     }
 
     return string(decodedText), nil
@@ -77,12 +77,12 @@ func decrypt(encodedText string) (string, error) {
 func handleSendMessage(w http.ResponseWriter, r *http.Request) {
     var msg Message
     if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
-        http.Error(w, "Invalid request: "+err.Error(), http.StatusBadRequest)
+        http.Error(w, fmt.Sprintf("Invalid request: %v", err), http.StatusBadRequest)
         return
     }
     encryptedText, err := encrypt(msg.Text)
     if err != nil {
-        http.Error(w, "Error encrypting message: "+err.Error(), http.StatusInternalServerError)
+        http.Error(w, fmt.Sprintf("Error encrypting message: %v", err), http.StatusInternalServerError)
         return
     }
     w.WriteHeader(http.StatusOK)
@@ -97,7 +97,7 @@ func handleRetrieveMessage(w http.ResponseWriter, r *http.Request) {
     }
     decryptedText, err := decrypt(encryptedText)
     if err != nil {
-        http.Error(w, "Error decrypting message: "+err.Error(), http.StatusInternalServerError)
+        http.Error(w, fmt.Sprintf("Error decrypting message: %v", err), http.StatusInternalServerError)
         return
     }
     w.WriteHeader(http.StatusOK)
@@ -114,10 +114,10 @@ func main() {
     })
 
     http.HandleFunc("/retrieve", func(w http.ResponseWriter, r *http.Request) {
-        if r["Method"] == "GET" {
+        if r.Method == "GET" {
             handleRetrieveMessage(w, r)
         } else {
-            http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+            http.Error(w, "Invalid request Type", http.StatusMethodNotAllowed)
         }
     })
 
