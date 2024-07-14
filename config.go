@@ -8,9 +8,9 @@ import (
 )
 
 type Configuration struct {
-	ServerPort       string
-	DatabaseURL      string
-	JWTSecret        string
+	ServerPort  string
+	DatabaseURL string
+	JWTSecret   string
 }
 
 func LoadEnv() {
@@ -19,13 +19,13 @@ func LoadEnv() {
 	}
 }
 
-func GetConfig() *Configuration {
+func GetProficientConfig() *Configuration {
 	LoadEnv()
 
 	conf := &Configuration{
-		ServerPort:       os.Getenv("SERVER_PORT"),
-		DatabaseURL:      os.Getenv("DATABASE_URL"),
-		JWTSecret:        os.Getenv("JWT_SECRET"),
+		ServerPort:  os.Getenv("SERVER_PORT"),
+		DatabaseURL: os.Getenv("DATABASE_URL"),
+		JWTSecret:   os.Getenv("JWT_SECRET"),
 	}
 
 	return conf
