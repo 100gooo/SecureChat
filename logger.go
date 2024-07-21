@@ -6,31 +6,26 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var Logger *log.Logger
+var ApplicationLogger *log.Logger
 
 func init() {
-	// Load .env file
 	if err := godotenv.Load(); err != nil {
-		log.Printf("Warning: Error loading .env file: %v. Proceeding with system environment variables.", err)
+		log.Printf("Warning: Failed to load .env file: %v. Using system environment variables instead.", err)
 	}
 
-	// Retrieve LOG_FILE environment variable
-	logFile := os.Getenv("LOG_FILE")
-	var output *os.File
-	var err error
+	logFilePath := os.Getenv("LOG_FILE")
+	var logOutputDestination *os.File
+	var fileError error
 
-	if logFile != "" {
-		// Open log file with specified flags and permissions
-		output, err = os.Open (logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			// Instead of halting execution, log the error to STDOUT and proceed with STDOUT as logging output
-			log.Printf("Failed to open log file %s: %v. Defaulting to STDOUT for logging.", logFile, err)
-			output = os.Stdout
+	if logFilePath != "" {
+		logOutputDestination, fileError = os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if fileError != nil {
+			log.Printf("Error: Could not open log file %s: %v. Falling back to STDOUT for logging output.", logFilePath, fileError)
+			logOutputDestination = os.Stdout
 		}
 	} else {
-		output = os.Stdout
+		logOutputDestination = os.Stdout
 	}
 
-	// Create a new logger
-	Logger = log.New(output, "SecureChat: ", log.LstdFlags|log.Lshortfile)
+	ApplicationLogger = log.New(logOutputDestination, "SecureChat: ", log.LstdFlags|log.Lshortput)
 }
