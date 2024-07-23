@@ -7,6 +7,7 @@ import (
 )
 
 var ApplicationLogger *log.Logger
+var ConsoleLogger *log.Logger
 
 func init() {
 	if err := godotenv.Load(); err != nil {
@@ -27,5 +28,11 @@ func init() {
 		logOutputDestination = os.Stdout
 	}
 
-	ApplicationLogger = log.New(logOutputDestination, "SecureChat: ", log.LstdFlags|log.Lshortput)
+	ApplicationLogger = log.New(logOutputDestination, "SecureChat: ", log.LstdFlags|log.Lshortfile)
+
+	ConsoleLogger = log.New(os.Stdout, "ConsoleOut: ", log.LstdFlags|log.Lshorttime)
+}
+
+func LogToConsole(message string) {
+	ConsoleLogger.Println(message)
 }
