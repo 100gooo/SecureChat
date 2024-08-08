@@ -36,7 +36,11 @@ func ValidatePassword(password string) error {
     if len(password) < minLength || len(password) > maxLength {
         return errors.New("password length is out of the allowed range")
     }
-    
+
+    if err := checkPasswordStrength(password); err != nil {
+        return err
+    }
+
     return nil
 }
 
@@ -64,4 +68,28 @@ func ValidateMessageLength(message string) error {
 func getMessageMaxLength() int {
     maxLength, _ := strconv.Atoi(os.Getenv("MESSAGE_MAX_LENGTH"))
     return maxLength
+}
+
+func checkPasswordStrength(password string) error {
+    var (
+        hasUpper   = regexp.MustCompile(`[A-Z]`)
+        hasLower   = regexp.MustCompile(`[a-z]`)
+        hasNumber  = regexp.MustCompile(`[0-9]`)
+        hasSpecial = regexp.MustCompile(`[!@#\$%\^&\*\(\)_\+\-=\[\]{};':"\\|,.<>/\?~]`)
+    )
+
+    if !hasUpper.MatchString(password) {
+        return errors.New("password must include at least one uppercase character")
+    }
+    if !hasLower.MatchString(password) {
+        return errors.New("password must include at least one lowercase character")
+    }
+    if !hasNumber.MatchString(password) {
+        return errors.New("password must contain at least one digit")
+    }
+    if !hasSpecial.MatchString(password) {
+        return errors.New("password must contain at least one special character")
+    }
+
+    return nil
 }
