@@ -13,22 +13,22 @@ import (
 	"testing"
 )
 
-func encryptionHandler(w http.ResponseWriter, r *http.Request) {
-	encryptionKey := []byte(os.Getenv("ENCRYPTION_KEY"))
+func secureMessageHandler(w http.ResponseWriter, r *http.Request) {
+	secretKey := []byte(os.Getenv("ENCRYPTION_KEY"))
 	switch r.URL.Path {
 	case "/encrypt":
-		plainMessage := r.URL.Query().Get("msg")
-		if encryptedMessage, err := encryptMessage(encryptionKey, plainMessage); err == nil {
+		messageToEncrypt := r.URL.Query().Get("msg")
+		if encryptedText, err := encryptText(secretKey, messageToEncrypt); err == nil {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(encryptedMessage))
+			w.Write([]byte(encryptedText))
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	case "/decrypt":
-		encryptedQueryMessage := r.URL.Query().Get("msg")
-		if decryptedMessage, err := decryptMessage(encryptionKey, encryptedQueryMessage); err == nil {
+		encryptedMessage := r.URL.Query().Get("msg")
+		if decryptedText, err := decryptText(secretKey, encryptedMessage); err == nil {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(decryptedMessage))
+			w.Write([]byte(decryptedText))
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
@@ -37,102 +37,102 @@ func encryptionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func encryptMessage(key []byte, plainText string) (string, error) {
-	cipherBlock, err := aes.NewCipher(key)
+func encryptText(key []byte, plaintext string) (string, error) {
+	blockCipher, err := aes.NewCipher(key)
 	if err != nil {
 		return "", err
 	}
-	base64EncodedPlainText := base64.StdEncoding.EncodeToString([]byte(plainText))
-	cipherText := make([]byte, aes.BlockSize+len(base64EncodedPlainText))
-	initializationVector := cipherText[:aes.BlockSize]
-	if _, err := io.ReadFull(rand.Reader, initializationVector); err != nil {
+	rawText := base64.StdEncoding.EncodeToString([]byte(plaintext))
+	encryptedBuffer := make([]byte, aes.BlockSize+len(rawText))
+	iv := encryptedBuffer[:aes.BlockSize]
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
 		return "", err
 	}
 
-	stream := cipher.NewCFBEncrypter(cipherBlock, initializationVector)
-	stream.XORKeyStream(cipherText[aes.BlockSize:], []byte(base64EncodedPlainText))
-	return base64.URLEncoding.EncodeToString(cipherText), nil
+	encrypter := cipher.NewCFBEncrypter(blockCipher, iv)
+	encrypter.XORKeyStream(encryptedBuffer[aes.BlockSize:], []byte(rawText))
+	return base64.URLEncoding.EncodeToString(encryptedBuffer), nil
 }
 
-func decryptMessage(key []byte, encryptedBase64Text string) (string, error) {
-	cipherBlock, err := aes.NewCipher(key)
+func decryptText(key []byte, encryptedText string) (string, error) {
+	blockCipher, err := aes.NewCipher(key)
 	if err != nil {
 		return "", err
 	}
-	encryptedBytes, err := base64.URLEncoding.DecodeString(encryptedBase64Text)
+	encryptedBytes, err := base64.URLEncoding.DecodeString(encryptedText)
 	if err != nil {
 		return "", err
 	}
 	if len(encryptedBytes) < aes.BlockSize {
 		return "", err
 	}
-	initializationVector := encryptedBytes[:aes.BlockSize]
-	encryptedBytes = encryptedBytes[aes.BlockSize:]
+	iv := encryptedBytes[:aes.BlockSize]
+	encryptedContent := encryptedBytes[aes.BlockSize:]
 
-	stream := cipher.NewCFBDecrypter(cipherBlock, initializationVector)
-	stream.XORKeyStream(encryptedBytes, encryptedBytes)
+	decrypter := cipher.NewCFBDecrypter(blockCipher, iv)
+	decrypter.XORKeyStream(encryptedContent, encryptedContent)
 
-	decryptedData, err := base64.StdEncoding.DecodeString(string(encryptedBytes))
+	decryptedData, err := base64.StdEncoding.DecodeString(string(encryptedContent))
 	if err != nil {
 		return "", err
 	}
 	return string(decryptedData), nil
 }
 
-func TestEncryptDecryptFlow(t *testing.T) {
+func TestSecureMessageHandlerFlow(t *testing.T) {
 	os.Setenv("ENCRYPTION_KEY", "thisIsASecretKey12345")
-	httpHandlerFunc := http.HandlerFunc(encryptionHandler)
+	handlerFunc := http.HandlerFunc(secureMessageHandler)
 
 	t.Run("testEncryptionDecryption", func(t *testing.T) {
-		message := "hello, world"
-		request, err := http.NewRequest("GET", "/encrypt?msg="+message, nil)
+		testMessage := "hello, world"
+		encryptRequest, err := http.NewRequest("GET", "/encrypt?msg="+testMessage, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		encryptionRecorder := httptest.NewRecorder()
-		httpHandlerFunc.ServeHTTP(encryptionRecorder, request)
+		encryptRecorder := httptest.NewRecorder()
+		handlerFunc.ServeHTTP(encryptRecorder, encryptRequest)
 
-		if status := encryptionRecorder.Code; status != http.StatusOK {
-			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+		if status := encryptRecorder.Code; status != http.StatusOK {
+			t.Errorf("Encryption handler returned wrong status code: got %v want %v", status, http.StatusOK)
 		}
 
-		encryptedMessage := encryptionRecorder.Body.String()
+		encryptedMsg := encryptRecorder.Body.String()
 
-		decryptionRequest, err := http.NewRequest("GET", "/decrypt?msg="+encryptedMessage, nil)
+		decryptRequest, err := http.NewRequest("GET", "/decrypt?msg="+encryptedMsg, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		decryptionRecorder := httptest.NewRecorder()
-		httpHandlerFunc.ServeHTTP(decryptionRecorder, decryptionRequest)
+		decryptRecorder := httptest.NewRecorder()
+		handlerFunc.ServeHTTP(decryptRecorder, decryptRequest)
 
-		if status := decryptionRecorder.Code; status != http.StatusOK {
-			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+		if status := decryptRecorder.Code; status != http.StatusOK {
+			t.Errorf("Decryption handler returned wrong status code: got %v want %v", status, http.StatusOK)
 		}
 
-		decryptedMessage := decryptionRecorder.Body.String()
-		if decryptedMessage != message {
-			t.Errorf("decryption failed: got %v want %v", decryptedMessage, message)
+		decryptedMsg := decryptRecorder.Body.String()
+		if decryptedMsg != testMessage {
+			t.Errorf("Decryption failed: got %v want %v", decryptedMsg, testMessage)
 		}
 	})
 }
 
-func TestHTTPHandlerResponses(t *testing.T) {
+func TestSecureMessageHandlerResponses(t *testing.T) {
 	os.Setenv("ENCRYPTION_KEY", "thisIsASecretKey12345")
-	httpHandlerFunc := http.HandlerFunc(encryptionHandler)
+	handlerFunc := http.HandlerFunc(secureMessageHandler)
 
 	t.Run("testValidRequest", func(t *testing.T) {
-		encryptionRequest, err := http.NewRequest("GET", "/encrypt?msg=test", nil)
+		encryptRequest, err := http.NewRequest("GET", "/encrypt?msg=test", nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		recorder := httptest.NewRecorder()
-		httpHandlerFunc.ServeHTTP(recorder, encryptionRequest)
+		handlerFunc.ServeHTTP(recorder, encryptRequest)
 
 		if status := recorder.Code; status != http.StatusOK {
-			t.Errorf("handler returned wrong status code for valid request: got %v want %v", status, http.StatusOK)
+			t.Errorf("Valid request handler returned wrong status code: got %v want %v", status, http.StatusOK)
 		}
 	})
 
@@ -143,10 +143,10 @@ func TestHTTPHandlerResponses(t *testing.T) {
 		}
 
 		recorder := httptest.NewRecorder()
-		httpHandlerFunc.ServeHTTP(recorder, invalidRequest)
+		handlerFunc.ServeHTTP(recorder, invalidRequest)
 
 		if status := recorder.Code; status != http.StatusNotFound {
-			t.Errorf("handler returned wrong status code for invalid request: got %v want %v", status, http.StatusNotFound)
+			t.Errorf("Invalid request handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
 		}
 	})
 }
