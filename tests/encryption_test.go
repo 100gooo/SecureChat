@@ -1,60 +1,60 @@
 package main
 
 import (
-	"os"
-	"testing"
+    "os"
+    "testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/yourproject/securechat/encryption"
+    "github.com/stretchr/testify/assert"
+    "github.com/yourproject/securechat/encryption"
 )
 
 func init() {
-	os.Setenv("ENCRYPTION_KEY", "your-32-length-secure-encryption-key")
+    os.Setenv("ENCRYPTION_KEY", "your-32-length-secure-encryption-key")
 }
 
-func TestEncryptDecrypt(t *testing.T) {
-	messages := []string{
-		"Hello, World!",
-		"Another test message with a bit more length to it.",
-		"",
-		"1234567890",
-	}
+func TestEncryptDecryptCycle(t *testing.T) {
+    testMessages := []string{
+        "Hello, World!",
+        "Another test message with a bit more length to it.",
+        "",
+        "1234567890",
+    }
 
-	for _, originalMessage := range messages {
-		encryptedMessage, err := encryption.Encrypt(originalMessage)
-		if err != nil {
-			t.Fatalf("Failed to encrypt message: %v", err)
-		}
+    for _, testMessage := range testMessages {
+        encryptedMsg, encryptErr := encryption.Encrypt(testMessage)
+        if encryptErr != nil {
+            t.Fatalf("Encryption failed: %v", encryptErr)
+        }
 
-		decryptedMessage, err := encryption.Decrypt(encryptedMessage)
-		if err != nil {
-			t.Fatalf("Failed to decrypt message: %v", err)
-		}
+        decryptedMsg, decryptErr := encryption.Decrypt(encryptedMsg)
+        if decryptErr != nil {
+            t.Fatalf("Decryption failed: %v", decryptErr)
+        }
 
-		assert.Equal(t, originalMessage, decryptedMessage, "The decrypted message does not match the original")
-	}
+        assert.Equal(t, testMessage, decryptedMsg, "Decrypted message differs from the original")
+    }
 }
 
-func TestEncryptionSecurity(t *testing.T) {
-	message := "This is a security test."
+func TestEncryptionUniqueness(t *testing.T) {
+    testMessage := "This is a uniqueness test."
 
-	encryptionResult1, err := encryption.Encrypt(message)
-	if err != nil {
-		t.Fatalf("Failed to encrypt message: %v", err)
-	}
+    firstEncryptionResult, firstErr := encryption.Encrypt(testMessage)
+    if firstErr != nil {
+        t.Fatalf("Encryption failed on first attempt: %v", firstErr)
+    }
 
-	encryptionResult2, err := encryption.Encrypt(message)
-	if err != nil {
-		t.Fatalf("Failed to encrypt message: %v", err)
-	}
+    secondEncryptionResult, secondErr := encryption.Encrypt(testMessage)
+    if secondErr != nil {
+        t.Fatalf("Encryption failed on second attempt: %v", secondErr)
+    }
 
-	assert.NotEqual(t, encryptionResult1, encryptionResult2, "Two encryption outputs for the same input are identical. IV might be static.")
+    assert.NotEqual(t, firstEncryptionResult, secondEncryptionResult, "Repeated encryption results should not match")
 }
 
-func TestErrorHandling(t *testing.T) {
-	_, encryptErr := encryption.Encrypt("")
-	assert.Error(t, encryptErr, "Encryption should fail on empty input")
+func TestInvalidInputs(t *testing.T) {
+    _, errOnEmptyEncrypt := encryption.Encrypt("")
+    assert.Error(t, errOnEmptyEncrypt, "Expected error when encrypting empty string")
 
-	_, decryptErr := encryption.Decrypt("")
-	assert.Error(t, decryptErr, "Decryption should fail on empty input")
+    _, errOnEmptyDecrypt := encryption.Decrypt("")
+    assert.Error(t, errOnEmptyDecrypt, "Expected error when decrypting empty string")
 }
