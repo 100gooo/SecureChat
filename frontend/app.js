@@ -24,30 +24,30 @@ function displayMessage(message) {
     console.log("Received message:", message);
 }
 
-document.getElementById('sendButton').addEventListener('click', function () {
-    const message = document.getElementById('messageInput').value;
-    sendMessage(message);
-    document.getElementById('messageInput').value = '';
-});
+function setupSendMessageButton() {
+    document.getElementById('sendButton').addEventListener('click', () => {
+        const message = document.getElementById('messageInput').value;
+        sendMessage(message);
+        document.getElementById('messageInput').value = '';
+    });
+}
 
 function fetchMessages() {
     fetch(`${BACKEND_URL}/messages`)
         .then(response => response.json())
-        .then(data => {
-            data.forEach(msg => {
-                const decryptedMsg = decryptMessage(msg);
-                displayMessage(decryptedMsg);
-            });
-        })
+        .then(data => data.forEach(msg => displayMessage(decryptMessage(msg))))
         .catch(error => console.error("Error fetching messages:", error));
 }
 
-socket.on('receiveMessage', function (encryptedMsg) {
-    const decryptedMsg = decryptMessage(encryptedMsg);
-    displayMessage(decryptedMsg);
-});
+function setupSocketListeners() {
+    socket.on('receiveMessage', encryptedMsg => {
+        displayMessage(decryptMessage(encryptedMsg));
+    });
+}
 
 function init() {
+    setupSendMessageButton();
+    setupSocketListeners();
     fetchMessages();
 }
 
