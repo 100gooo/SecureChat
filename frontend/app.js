@@ -6,13 +6,34 @@ const SECRET_KEY = process.env.REACT_APP_SECRET_KEY || 'mySecretKey';
 
 const socket = io(BACKEND_URL);
 
+const encryptCache = {};
+const decryptCache = {};
+
 function encryptMessage(message) {
-    return CryptoJS.AES.encrypt(message, SECRET_KEY).toString();
+    // Check cache first
+    if (encryptCache[message]) {
+        return encryptCache[message];
+    }
+  
+    const encryptedMessage = CryptoJS.AES.encrypt(message, SECRET_KEY).toString();
+    // Cache the result before returning
+    encryptCache[message] = encryptedMessage;
+  
+    return encryptedMessage;
 }
 
 function decryptMessage(ciphertext) {
+    // Check cache first
+    if (decryptCache[ciphertext]) {
+        return decryptCache[ciphertext];
+    }
+  
     const bytes = CryptoJS.AES.decrypt(ciphertext, SECRET_KEY);
-    return bytes.toString(CryptoJS.enc.Utf8);
+    const decryptedMessage = bytes.toString(CryptoJS.enc.Utf8);
+    // Cache the result before returning
+    decryptCache[ciphertext] = decryptedMessage;
+  
+    return decryptedMessage;
 }
 
 function sendMessage(message) {
