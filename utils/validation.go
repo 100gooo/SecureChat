@@ -9,20 +9,20 @@ import (
 )
 
 func ValidateUsername(username string) error {
-    if err := validateUsernameLength(username); err != nil {
+    if err := checkUsernameLength(username); err != nil {
         return err
     }
-    return validateUsernameCharacters(username)
+    return checkUsernameCharacters(username)
 }
 
-func validateUsernameLength(username string) error {
+func checkUsernameLength(username string) error {
     if len(username) < 3 || len(username) > 30 {
         return errors.New("username must be between 3 and 30 characters long")
     }
     return nil
 }
 
-func validateUsernameCharacters(username string) error {
+func checkUsernameCharacters(username string) error {
     match, err := regexp.MatchString("^[a-zA-Z0-9._]+$", username)
     if err != nil {
         return fmt.Errorf("failed to validate username characters: %w", err)
@@ -34,7 +34,7 @@ func validateUsernameCharacters(username string) error {
 }
 
 func ValidatePassword(password string) error {
-    minLength, maxLength := getPasswordLengthConstraints()
+    minLength, maxLength := getPasswordConstraints()
     if len(password) < minLength || len(password) > maxLength {
         return errors.New("password length is out of the allowed range")
     }
@@ -42,15 +42,15 @@ func ValidatePassword(password string) error {
     return checkPasswordStrength(password)
 }
 
-func getPasswordLengthConstraints() (minLength, maxLength int) {
+func getPasswordConstraints() (minLength, maxLength int) {
     var err error
     minLength, err = strconv.Atoi(os.Getenv("PASSWORD_MIN_LENGTH"))
     if err != nil {
-        minLength = 8 // default min length if not set or error occurs
+        minLength = 8
     }
     maxLength, err = strconv.Atoi(os.Getenv("PASSWORD_MAX_LENGTH"))
     if err != nil {
-        maxLength = 64 // default max length if not set or error occurs
+        maxLength = 64
     }
     return minLength, maxLength
 }
@@ -67,39 +67,39 @@ func ValidateEmail(email string) error {
 }
 
 func ValidateMessageLength(message string) error {
-    maxLength := getMessageMaxLength()
-    if len(message) > maxLength {
+    maxMessageLength := getMessageMaxLength()
+    if len(message) > maxMessageLength {
         return errors.New("message exceeds the maximum allowed length")
     }
     return nil
 }
 
 func getMessageMaxLength() int {
-    maxLength, err := strconv.Atoi(os.Getenv("MESSAGE_MAX_LENGTH"))
+    maxMessageLength, err := strconv.Atoi(os.Getenv("MESSAGE_MAX_LENGTH"))
     if err != nil {
-        maxLength = 1000 // default max length if not set or error occurs
+        maxMessageLength = 1000
     }
-    return maxLength
+    return maxMessageLength
 }
 
 func checkPasswordStrength(password string) error {
     var (
-        hasUpper   = regexp.MustCompile(`[A-Z]`)
-        hasLower   = regexp.MustCompile(`[a-z]`)
-        hasNumber  = regexp.MustCompile(`[0-9]`)
-        hasSpecial = regexp.MustCompile(`[!@#\$%\^&\*\(\)_\+\-=\[\]{};':"\\|,.<>/\?~]`)
+        hasUppercase   = regexp.MustCompile(`[A-Z]`)
+        hasLowercase   = regexp.MustCompile(`[a-z]`)
+        hasDigit       = regexp.MustCompile(`[0-9]`)
+        hasSpecialChar = regexp.MustCompile(`[!@#\$%\^&\*\(\)_\+\-=\[\]{};':"\\|,.<>/\?~]`)
     )
 
-    if !hasUpper.MatchString(password) {
+    if !hasUppercase.MatchString(password) {
         return errors.New("password must include at least one uppercase character")
     }
-    if !hasLower.MatchString(password) {
+    if !hasLowercase.MatchString(password) {
         return errors.New("password must include at least one lowercase character")
     }
-    if !hasNumber.MatchString(password) {
+    if !hasDigit.MatchString(password) {
         return errors.New("password must contain at least one digit")
     }
-    if !hasSpecial.MatchString(password) {
+    if !hasSpecialChar.MatchString(password) {
         return errors.New("password must contain at least one special character")
     }
 
