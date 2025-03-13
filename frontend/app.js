@@ -1,75 +1,71 @@
 import io from 'socket.io-client';
 import CryptoJS from 'crypto-js';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
-const SECRET_KEY = process.env.REACT_APP_SECRET_KEY || 'mySecretKey';
+const SERVER_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+const CRYPTO_SECRET_KEY = process.env.REACT_APP_SECRET_KEY || 'mySecretKey';
 
-const socket = io(BACKEND_URL);
+const websocketConnection = io(SERVER_URL);
 
-const encryptCache = {};
-const decryptCache = {};
+const encryptionCache = {};
+const decryptionCache = {};
 
-function encryptMessage(message) {
-    // Check cache first
-    if (encryptCache[message]) {
-        return encryptCache[message];
+function encryptText(text) {
+    if (encryptionCache[text]) {
+        return encryptionCache[text];
     }
   
-    const encryptedMessage = CryptoJS.AES.encrypt(message, SECRET_KEY).toString();
-    // Cache the result before returning
-    encryptCache[message] = encryptedMessage;
+    const encryptedText = CryptoJS.AES.encrypt(text, CRYPTO_SECRET_KEY).toString();
+    encryptionCache[text] = encryptedText;
   
-    return encryptedMessage;
+    return encryptedText;
 }
 
-function decryptMessage(ciphertext) {
-    // Check cache first
-    if (decryptCache[ciphertext]) {
-        return decryptCache[ciphertext];
+function decryptText(encryptedText) {
+    if (decryptionCache[encryptedText]) {
+        return decryptionCache[encryptedText];
     }
   
-    const bytes = CryptoJS.AES.decrypt(ciphertext, SECRET_KEY);
-    const decryptedMessage = bytes.toString(CryptoJS.enc.Utf8);
-    // Cache the result before returning
-    decryptCache[ciphertext] = decryptedMessage;
+    const decryptedBytes = CryptoJS.AES.decrypt(encryptedText, CRYPTO_SECRET_KEY);
+    const decryptedText = decryptedBytes.toString(CryptoJS.enc.Utf8);
+    decryptionCache[encryptedText] = decryptedText;
   
-    return decryptedMessage;
+    return decryptedText;
 }
 
-function sendMessage(message) {
-    const encryptedMsg = encryptMessage(message);
-    socket.emit('sendMessage', encryptedMsg);
+function transmitEncryptedMessage(messageContent) {
+    const encryptedMessage = encryptText(messageContent);
+    websocketConnection.emit('sendMessage', encryptedMessage);
 }
 
-function displayMessage(message) {
-    console.log("Received message:", message);
+function displayEncryptedMessage(encryptedMessageContent) {
+    console.log("Received message:", encryptedMessageContent);
 }
 
-function setupSendMessageButton() {
+function configureSendButtonListener() {
     document.getElementById('sendButton').addEventListener('click', () => {
-        const message = document.getElementById('messageInput').value;
-        sendMessage(message);
+        const userInput = document.getElementById('messageInput').value;
+        transmitEncryptedMessage(userInput);
         document.getElementById('messageInput').value = '';
     });
 }
 
-function fetchMessages() {
-    fetch(`${BACKEND_URL}/messages`)
+function retrieveAndDisplayMessages() {
+    fetch(`${SERVER_URL}/messages`)
         .then(response => response.json())
-        .then(data => data.forEach(msg => displayMessage(decryptMessage(msg))))
+        .then(data => data.forEach(encryptedMsg => displayEncryptedMessage(decryptText(encryptedMsg))))
         .catch(error => console.error("Error fetching messages:", error));
 }
 
-function setupSocketListeners() {
-    socket.on('receiveMessage', encryptedMsg => {
-        displayMessage(decryptMessage(encryptedMsg));
+function initializeWebSocketEvents() {
+    websocketConnection.on('receiveMessage', encryptedMessage => {
+        displayEncryptedMessage(decryptText(encryptedMessage));
     });
 }
 
-function init() {
-    setupSendMessageButton();
-    setupSocketListeners();
-    fetchMessages();
+function initializeChat() {
+    configureSendButtonListener();
+    initializeWebSocketEvents();
+    retrieveAndDisplayMessages();
 }
 
-init();
+initializeChat();
